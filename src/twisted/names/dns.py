@@ -59,6 +59,7 @@ __all__ = [
     "TXT",
     "SSHFP",
     "TSIG",
+    "CAA",
     "WKS",
     "ANY",
     "CH",
@@ -101,6 +102,7 @@ __all__ = [
     "Record_SRV",
     "Record_SSHFP",
     "Record_TSIG",
+    "Record_CAA",
     "Record_TXT",
     "Record_WKS",
     "UnknownRecord",
@@ -212,6 +214,7 @@ SPF = 99
 # messages the same way normal RRs are.
 TKEY = 249
 TSIG = 250
+CAA  = 257
 
 QUERY_TYPES = {
     A: "A",
@@ -243,6 +246,7 @@ QUERY_TYPES = {
     SPF: "SPF",
     TKEY: "TKEY",
     TSIG: "TSIG",
+    CAA: "CAA",
 }
 
 IXFR, AXFR, MAILB, MAILA, ALL_RECORDS = range(251, 256)
@@ -2341,6 +2345,83 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     def __hash__(self):
         return hash((self.algorithm, self.timeSigned, self.MAC, self.originalID))
 
+@implementer(IEncodableRecord)
+class Record_CAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
+    """
+    A transaction signature, encapsulated in a RR, as described
+    in U{RFC 2845 <https://tools.ietf.org/html/rfc2845>}.
+
+    @type algorithm: L{Name}
+    @ivar algorithm: The name of the signature or MAC algorithm.
+
+    @type timeSigned: L{int}
+    @ivar timeSigned: Signing time, as seconds from the POSIX epoch.
+
+    @type fudge: L{int}
+    @ivar fudge: Allowable time skew, in seconds.
+
+    @type MAC: L{bytes}
+    @ivar MAC: The message digest or signature.
+
+    @type originalID: L{int}
+    @ivar originalID: A message ID.
+
+    @type error: L{int}
+    @ivar error: An error code (extended C{RCODE}) carried
+          in exceptional cases.
+
+    @type otherData: L{bytes}
+    @ivar otherData: Other data carried in exceptional cases.
+
+    """
+
+    fancybasename = "CAA"
+    compareAttributes = (
+        "flags",
+        "tag",
+        "domain",
+        "ttl",
+    )
+    showAttributes = ["flags", "tag", "domain"]
+
+    TYPE = TSIG
+
+    def __init__(
+        self,
+        flags=0,
+        tag=b"issue",
+        domain=b"",
+        ttl=0,
+    ):
+        # All of our init arguments have to have defaults, because of
+        # the way IEncodable and Message.parseRecords() work, but for
+        # some of our arguments there is no reasonable default; we use
+        # invalid values here to prevent a user of this class from
+        # relying on what's really an internal implementation detail.
+        self.flags = flags
+        self.tag = tag
+        self.domain = domain
+        self.ttl = ttl
+
+    def encode(self, strio, compDict=None):
+        strio.write(
+            struct.pack(
+                "!BB",
+                self.flags,
+                len(self.tag)
+            )
+        )
+        strio.write(self.tag)
+        strio.write(self.domain)
+
+    def decode(self, strio, length=None):
+        r = struct.unpack("!BB", readPrecisely(strio, 2))
+        (self.flags, tag_length) = r
+        self.tag = readPrecisely(strio, tag_length)
+        self.domain = readPrecisely(strio, length - tag_length - 2)
+
+    def __hash__(self):
+        return hash((self.tag, self.domain, self.ttl))
 
 def _responseFromMessage(responseConstructor, message, **kwargs):
     """

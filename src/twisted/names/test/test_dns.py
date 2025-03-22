@@ -47,6 +47,7 @@ RECORD_TYPES = [
     dns.Record_NAPTR,
     dns.Record_SSHFP,
     dns.Record_TSIG,
+    dns.Record_CAA,
     dns.UnknownRecord,
 ]
 
@@ -718,6 +719,12 @@ class RoundtripDNSTests(unittest.TestCase):
             b"\x80\x00\x00\x00\x00\x08"
         )
         self.assertEncodedFormat(rdata, rr)
+
+    def test_CAA(self):
+        rr = dns.Record_CAA(0, b"issue", b"letsencrypt.org")
+        self._recordRoundtripTest(rr)
+        rr = dns.Record_CAA(0, b"issuewild", b"letsencrypt.org")
+        self._recordRoundtripTest(rr)
 
     def test_TXT(self):
         """
