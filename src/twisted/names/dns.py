@@ -214,7 +214,7 @@ SPF = 99
 # messages the same way normal RRs are.
 TKEY = 249
 TSIG = 250
-CAA  = 257
+CAA = 257
 
 QUERY_TYPES = {
     A: "A",
@@ -2345,6 +2345,7 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     def __hash__(self):
         return hash((self.algorithm, self.timeSigned, self.MAC, self.originalID))
 
+
 @implementer(IEncodableRecord)
 class Record_CAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
@@ -2404,13 +2405,7 @@ class Record_CAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.ttl = ttl
 
     def encode(self, strio, compDict=None):
-        strio.write(
-            struct.pack(
-                "!BB",
-                self.flags,
-                len(self.tag)
-            )
-        )
+        strio.write(struct.pack("!BB", self.flags, len(self.tag)))
         strio.write(self.tag)
         strio.write(self.domain)
 
@@ -2422,6 +2417,7 @@ class Record_CAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def __hash__(self):
         return hash((self.tag, self.domain, self.ttl))
+
 
 def _responseFromMessage(responseConstructor, message, **kwargs):
     """
